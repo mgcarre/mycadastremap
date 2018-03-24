@@ -1,0 +1,5 @@
+{
+    "mapbox": {
+        "token": "MAPBOX_API_KEY"
+    }
+}
