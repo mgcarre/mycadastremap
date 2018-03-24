@@ -1,5 +1,5 @@
 {
-  "name": "affichagecadastre",
+  "name": "mycadastremap",
   "version": "1.0.0",
   "description": "Affiche les donnees cadastrales francaises sur une carte MapBox",
   "main": "server.js",
@@ -9,6 +9,6 @@
     "express": "^4.16.2"
   },
   "scripts": {
-    "start": "nodemon server.js"
+    "start": "node server.js"
   }
 }
