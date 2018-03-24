@@ -31,7 +31,7 @@
             padding-left: .4rem;
             border-radius: .5rem;
             overflow: auto;
-            background: rgba(155, 155, 155, 0.6)
+            background: rgba(255, 255, 255, 0.6)
         }
         .surface-content {
             word-wrap: break-word;
@@ -152,6 +152,7 @@
                         });
                         this.map.addControl(new mapboxgl.NavigationControl());
                         this.map.addControl(new mapboxgl.FullscreenControl());
+                        this.addButton()
                         this.map.on('mousemove', (event) => this.evented(event))
                         this.map.on('touchmove', (event) => this.evented(event))
                         this.map.on('contextmenu', (event) => {
@@ -167,7 +168,7 @@
                                             Préfixe : ${calque.properties.prefixe}
                                             Section : ${calque.properties.section}
                                             Numéro  : ${calque.properties.numero}
-                                            Surface (est.) : ${calque.properties.contenance}`)
+                                            Surface : ${calque.properties.contenance}`)
                                             break;
                                         case 'known':
                                             sortie.push(`<h4>Lieu-dit :</h4>${calque.properties.nom}`)
@@ -208,6 +209,19 @@
                     }).catch(err => console.error(err))
                 }
             }
+            addButton(){
+                let div = document.createElement('div')
+                div.style.top = 0
+                div.style.right = 0
+                div.style.overflow = 'auto'
+                div.style.position = 'absolute'
+                let btn = document.createElement('button')
+                btn.classList.add('btn', 'btn-error')
+                btn.innerText = "Efface carte"
+                btn.addEventListener('click', () => this.removePolygons())
+                div.appendChild(btn)
+                document.body.appendChild(div)
+            }
             evented(event) {
                 let ici = this.map.queryRenderedFeatures(event.point)
                 let batiment = ici.find(elem => elem.layer.id == "cadastre-calque-building")
@@ -223,7 +237,7 @@
                     if(parcelle){
                         let polygon = turf.polygon(parcelle.geometry.coordinates)
                         let surface = turf.area(polygon) > 10000 ? {unit: "ha", value: (turf.area(polygon)/10000), sup: '' } : {unit: 'm', value: turf.area(polygon), sup: 2 }
-                        sortie.push(`Parc. : ${turf.round(surface.value, 2)}${surface.unit}<sup>${surface.sup}</sup> au sol.`)
+                        sortie.push(`Parc. : ${turf.round(surface.value * 0.99765, 3)}${surface.unit}<sup>${surface.sup}</sup> au sol.`)
                     }
                     sortie.forEach(elem => {
                         let p = document.createElement('p')
@@ -244,6 +258,7 @@
                     this.map.removeSource(couche.source)
                 })
                 this.couches = new Array()
+                console.info('Polygones supprimes')
             }
             addPolygons(feature, layer) {
                 let source = 'cadastre-source-' + layer
