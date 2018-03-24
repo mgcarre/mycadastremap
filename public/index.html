@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Recherche</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        @import url('https://api.mapbox.com/mapbox-gl-js/v0.44.1/mapbox-gl.css');
+        @import url('https://unpkg.com/spectre.css/dist/spectre.min.css');
+        #map {
+            position: fixed;
+            height: 100%;
+            width: 100%;
+        }
+        #resultats {
+            overflow-y: auto;
+            max-height: 35vh;
+        }
+        .m-fadeOut {
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s linear 300ms, opacity 300ms;
+        }
+        #surface {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            min-height: 20vh;
+            width: 150px;
+            padding-left: .4rem;
+            border-radius: .5rem;
+            overflow: auto;
+            background: rgba(155, 155, 155, 0.6)
+        }
+        .surface-content {
+            word-wrap: break-word;
+        }
+    </style>
+    <script src="https://unpkg.com/vue@2.5.13/dist/vue.js"></script>
+    <script src='https://npmcdn.com/@turf/turf/turf.min.js'></script>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v0.44.1/mapbox-gl.js'></script>
+
+</head>
+<body>
+
+    <div class="container" id="bandeau">
+        <div class="columns">
+            <div id="app" class="form-group col-8">
+                <h3>Recherche</h3>
+                <form action="#" v-on:submit.prevent="sub" v-bind:class="{ 'has-error': error.active, 'loading': isLoading}">
+                    <label for="rech" class="form-label">Ville recherchée</label>
+                    <div class="input-group">
+                        <input class="form-input" type="search" name="recherche" id="rech" v-model="value" placeholder="Recherchez une ville ou une adresse">
+                        <button class="btn" type="submit">Recherche</button>
+                        <button class="btn" id="geolocateMe">Geolocalisez-moi</button>
+                    </div>
+                    <p class="form-input-hint" v-if="error.active">{{ error.message }}</p>
+                    <div class="form-group">
+                        <label class="form-switch">
+                            <input type="checkbox" v-model="options.city">
+                            <i class="form-icon"></i> Commune
+                        </label>
+                        <label class="form-switch">
+                            <input type="checkbox" v-model="options.building">
+                            <i class="form-icon"></i> Bâtiments
+                        </label>
+                        <label class="form-switch">
+                            <input type="checkbox" v-model="options.area">
+                            <i class="form-icon"></i> Parcelles
+                        </label>
+                        <label class="form-switch">
+                            <input type="checkbox" v-model="options.sheet">
+                            <i class="form-icon"></i> Feuillets
+                        </label>
+                        <label class="form-switch">
+                            <input type="checkbox" v-model="options.known">
+                            <i class="form-icon"></i> Lieux-dits
+                        </label>
+                        <label class="form-switch">
+                            <input type="checkbox" v-model="options.section">
+                            <i class="form-icon"></i> Sections
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div id="resultats" class="col-4">
+                <h3>Résultats</h3>
+                <ul>
+                    <todo-item v-for="item in myList" :todo="item" :key="item.id" v-on:click.native="test(item.id)">
+                    </todo-item>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="contenu">
+        <div class="col-12">
+            <div id='map'>
+                
+            </div>
+            <div id="surface"><h4>Surface</h4><section id="surface-section"></section></div>
+        </div>
+    </div>
+
+    <script>
+        class MapboxMap {
+            constructor(HTMLelement) {
+                this.HTMLContainer = document.querySelector(HTMLelement)
+                this.loaded = false
+                this.map = null
+                this.markerTitle = ''
+                this.couches = new Array()
+                this.layerColours = {
+                    building: {
+                        'fill-color': '#f08',
+                        'fill-opacity': 0.4
+                    },
+                    city: {
+                        'fill-outline-color': '#889be8',
+                        'fill-opacity': 0.35,
+                    },
+                    sheet: {
+                        'fill-color': '#f6ff9e',
+                        'fill-opacity': 0.1
+                    },
+                    known: {
+                        'fill-color': '#f6ff9e',
+                        'fill-opacity': 0.2
+                    },
+                    area: {
+                        'fill-color': '#5b602b',
+                        'fill-opacity': 0.3
+                    },
+                    section: {
+                        'fill-color': '#797a73',
+                        'fill-opacity': 0.15
+                    }
+
+                }
+            }
+            load() {
+                if (!this.loaded) {
+                    fetch('/token').then(res => res.text()).then(rep => {
+                        this.loaded = true
+                        mapboxgl.accessToken = rep
+                        this.map = new mapboxgl.Map({
+                            container: this.HTMLContainer,
+                            center: [2.5377, 46.718],
+                            zoom: 4,
+                            style: 'mapbox://styles/mgcarre/cj9suhpr72dkz2socqotoy2p8'
+                        });
+                        this.map.addControl(new mapboxgl.NavigationControl());
+                        this.map.addControl(new mapboxgl.FullscreenControl());
+                        this.map.on('mousemove', (event) => this.evented(event))
+                        this.map.on('touchmove', (event) => this.evented(event))
+                        this.map.on('contextmenu', (event) => {
+                            let ici = this.map.queryRenderedFeatures(event.point)
+                            let target = document.querySelector('#surface-section')
+                            let sortie = new Array()
+                            ici.forEach(calque => {
+                                if(calque.layer.id.indexOf('cadastre-calque') > -1) {
+                                    let filtered = calque.layer.id.substr('cadastre-calque-'.length)
+                                    switch (filtered) {
+                                        case 'area':
+                                            sortie.push(`<h4>Parcelle :</h4>
+                                            Préfixe : ${calque.properties.prefixe}
+                                            Section : ${calque.properties.section}
+                                            Numéro  : ${calque.properties.numero}
+                                            Surface (est.) : ${calque.properties.contenance}`)
+                                            break;
+                                        case 'known':
+                                            sortie.push(`<h4>Lieu-dit :</h4>${calque.properties.nom}`)
+                                            break
+                                        case 'city':
+                                            sortie.push(`<h4>Commune :</h4> ${calque.properties.nom}`)
+                                            break
+                                        case 'sheet':
+                                            sortie.push(`</h4>Feuille :</h4>
+                                            Préfixe : ${calque.properties.prefixe}
+                                            Section : ${calque.properties.section}
+                                            Numéro  : ${calque.properties.numero}
+                                            Qualité : ${calque.properties.qualite}
+                                            Echelle : ${calque.properties.echelle}
+                                            Créée le : ${calque.properties.created}
+                                            Dernière mise à jour : ${calque.properties.updated}`)
+                                            break
+                                        case 'section':
+                                            sortie.push(`</h4>Section :</h4>
+                                            Préfixe : ${calque.properties.prefixe}
+                                            Code : ${calque.properties.code}
+                                            Créée le : ${calque.properties.created}
+                                            Dernière mise à jour : ${calque.properties.updated}`)
+                                            break
+                                        default:
+                                            sortie.push(`Les informations sont déjà affichées à l'écran.`)
+                                            break;
+                                    }
+
+                                }
+                            })
+                            console.log(sortie)
+                            new mapboxgl.Popup()
+                                .setLngLat(event.lngLat)
+                                .setHTML(sortie.join('<br>'))
+                                .addTo(this.map)
+                        })
+                    }).catch(err => console.error(err))
+                }
+            }
+            evented(event) {
+                let ici = this.map.queryRenderedFeatures(event.point)
+                let batiment = ici.find(elem => elem.layer.id == "cadastre-calque-building")
+                let parcelle = ici.find(elem => elem.layer.id == "cadastre-calque-area")
+                let target = document.querySelector('#surface-section')
+                target.innerHTML = ''
+                let sortie = new Array()
+                if(batiment || parcelle){
+                    if(batiment){
+                        let polygon = turf.polygon(batiment.geometry.coordinates)
+                        sortie.push(`Bât : ${turf.round(turf.area(polygon),2)}m<sup>2</sup> au sol.`)
+                    }
+                    if(parcelle){
+                        let polygon = turf.polygon(parcelle.geometry.coordinates)
+                        let surface = turf.area(polygon) > 10000 ? {unit: "ha", value: (turf.area(polygon)/10000), sup: '' } : {unit: 'm', value: turf.area(polygon), sup: 2 }
+                        sortie.push(`Parc. : ${turf.round(surface.value, 2)}${surface.unit}<sup>${surface.sup}</sup> au sol.`)
+                    }
+                    sortie.forEach(elem => {
+                        let p = document.createElement('p')
+                        p.classList.add('section-content')
+                        p.innerHTML = elem
+                        target.appendChild(p)
+                    })
+                } else {
+                    target.innerHTML = '<p class="surface-content">Survolez un batiment ou une parcelle...</p>'
+                }
+            }
+            setMarkerTitle(title){
+                this.markerTitle = title
+            }
+            removePolygons(){
+                this.couches.forEach(couche => {
+                    this.map.removeLayer(couche.layer)
+                    this.map.removeSource(couche.source)
+                })
+                this.couches = new Array()
+            }
+            addPolygons(feature, layer) {
+                let source = 'cadastre-source-' + layer
+                let calque = 'cadastre-calque-' + layer
+                this.map.addSource(source, {
+                    type: "geojson",
+                    data: feature,
+                    clusterMaxZoom: 14,
+                    clusterRadius: 50
+                })
+                this.map.addLayer({
+                    id: calque,
+                    type: "fill",
+                    source: source,
+                    paint: this.layerColours[layer]
+                })
+                this.couches.push({source: source, layer: calque})
+            }
+            removeMarkers() {
+                document.querySelectorAll('.mapboxgl-marker').forEach(element => element.remove())
+            }
+            toggleVisibility() {
+                this.HTMLContainer.classList.toggle('_nodisplay')
+                this.map.resize()
+            }
+            drawMarker(geom) {
+                let marker = new mapboxgl.Marker()
+                if(this.markerTitle !== ''){
+                    let popup = new mapboxgl.Popup()
+                        .setText(this.markerTitle)
+                    marker.setPopup(popup)
+                }
+                    marker.setLngLat(geom.coordinates).addTo(this.map)
+                setTimeout(() => {
+                    this.map.flyTo({ center: geom.coordinates, zoom: 12 })
+                }, 2000);
+            }
+        }
+        class Cadastre {
+            constructor(idVille, options = {}) {
+                this.id = idVille
+                this.options = Object.assign({}, {
+                    building: true,
+                    city: false,
+                    sheet: false,
+                    known: false,
+                    area: false,
+                    section: false
+                }, options)
+                this.types = {
+                    building: 0,
+                    city: 1,
+                    sheet: 2,
+                    known: 3,
+                    area: 4,
+                    section: 5
+                }
+                this.loaded = {
+                    building: null,
+                    city: null,
+                    sheet: null,
+                    known: null,
+                    area: null,
+                    section: null
+                }
+                this.promises = new Array()
+            }
+            getCount(){
+                let options = Object.keys(this.options)
+                return options.reduce(elem => this.options[elem] === true, 0)
+            }
+            getData(type){
+                return fetch(`/geom/${this.id}/${this.types[type]}`)
+                    .then(res => {
+                        if(res.status === 200 && res.headers.get('Content-Length') > 0) {
+                            return res.json()
+                        } else {
+                            return null
+                        }
+                    })
+                    .catch(err => console.error(err))
+            }
+        }
+        const Cmap = new MapboxMap('#map')
+        Cmap.load()
+        Vue.config.devtools = true
+        Vue.component('todo-item', {
+            props: ['todo'],
+            template: '<li>{{ todo.label }}</li>'
+        })
+        let resultats = new Vue({
+            el: '#resultats',
+            data: {
+                myList: [
+                    { id: 0, label: 'Pas de résultat', hidden: false}
+                ]
+            },
+            methods: {
+                test: function(id){
+                    if(id === 0){
+                        return
+                    }
+                    let obj = (this.myList.filter(elem => elem.id === id))[0]
+                    let cadastre = new Cadastre(id, app.options)
+                    if(app.getOptions().length === 0){
+                        alert('Pensez à sélectionner des données à afficher puis cliquer à nouveau sur la ville dans la liste "Résultats"')
+                    } else {
+                        app.getOptions().forEach(element => {
+                            cadastre.getData(element).then(res => {
+                                if(res.message){
+                                    console.error(res.message)
+                                } else {
+                                    Cmap.addPolygons(res, element)
+                                }
+                            })
+                        })
+                    }
+                    Cmap.setMarkerTitle(obj.label)
+                    Cmap.drawMarker(obj.coords)
+                    this.clear(id)
+                },
+                clear: function(id) {
+                    this.myList = this.myList.filter(elem => elem.id === id)
+                }
+            }
+        })
+        let app = new Vue({
+            el: '#app',
+            data: {
+                value: '',
+                error: {
+                    active: false,
+                    message: 'Une erreur est survenue, veuillez réessayer.'
+                },
+                isLoading: false,
+                options: {
+                    building: true,
+                    city: true,
+                    sheet: false,
+                    area: false,
+                    known: false,
+                    section: false
+                }
+            },
+            methods: {
+                sub: function() {
+                    this.isLoading = true
+                    let restrict = ['lyon', 'marseille', 'paris']
+                    if(restrict.indexOf(this.value.toLowerCase()) > -1){
+                        this.error.active = true
+                        this.error.message = `Les villes suivantes ne permettent pas la recherche inversée : ${restrict.join(', ')}. Privilégiez la recherche par adresse postale ou par code postal.`
+                        this.isLoading = false
+                        throw new Error(this.error.message)
+                    }
+                    if(this.value !== '' && this.value.length !== 0){
+                        recherche(this.value).then(res => {
+                            this.error.active = false
+                            for(let feature of res.features){
+                                let props = feature.properties
+                                resultats.myList.push({
+                                    id: props.id,
+                                    label: `${props.label} (${props.postcode})`,
+                                    coords: feature.geometry,
+                                    hidden: false
+                                })
+                            }
+                            this.isLoading = false
+                        }).catch(err => {
+                            console.error(err)
+                            this.error.active = true
+                            this.isLoading = false
+                        })
+                    } else {
+                        this.error.active = true
+                        this.isLoading = false
+                    }
+                },
+                getOptions: function() {
+                    let options = Object.keys(this.options)
+                    return options.filter(elem => this.options[elem] === true)
+                }
+            }
+        })
+
+        const baseUrl = 'https://api-adresse.data.gouv.fr/'
+        /**
+         * URL de recherche texte
+         * 
+         * @param {string} lookup 
+         * @returns {string} - Url
+         */
+        const searchAdresse = (lookup) => `${baseUrl}search/?q=${lookup}&limit=20`
+
+        /**
+         * URL de recherche par coordonées
+         * 
+         * @param {any} {lat, lon} 
+         * @returns {string} - Url
+         */
+        const searchCoords = ({ lat, lng }) => `${baseUrl}reverse/?lon=${lng}&lat=${lat}`
+
+        const recherche = (q) => {
+            if (typeof q === 'string') {
+                return fetch(searchAdresse(q)).then(res => res.json())
+            } else {
+                return fetch(searchCoords(q)).then(res => res.json())
+            }
+        }
+        document.querySelector('#geolocateMe').addEventListener('click', (e) => {
+            e.preventDefault()
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    console.log(pos)
+                    fetch(searchCoords({lat: pos.coords.latitude, lng: pos.coords.longitude})).then(rep => rep.json()).then(res => {
+                        resultats.myList = new Array()
+                        for (let feature of res.features) {
+                            let props = feature.properties
+                            resultats.myList.push({
+                                id: props.id,
+                                label: `${props.city} (${props.postcode})`,
+                                coords: feature.geometry
+                            })
+                        }
+                    })
+                }, (err) => {
+                    console.error(err)
+                })
+            }
+        })
+    </script>
+</body>
+</html>
