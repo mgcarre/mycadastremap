@@ -15,7 +15,7 @@ Permet d'afficher une carte MapBox avec les paramètres de l'API Cadastre.
 
 ## Attention
 
-** A utiliser uniquement sur un serveur local.
+** A utiliser uniquement sur un serveur local. **
 
 ## Todo
 
