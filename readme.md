@@ -13,6 +13,10 @@ Permet d'afficher une carte MapBox avec les paramètres de l'API Cadastre.
 * Permet de calculer les surfaces des bâtiments affichés sur le cadastre (par survol de souris)
 * Permet d'afficher les détails d'un calque (sauf batiments ou parcelles) par clic droit.
 
+## Attention
+
+** A utiliser uniquement sur un serveur local.
+
 ## Todo
 
 * Bundle avec Webpack
