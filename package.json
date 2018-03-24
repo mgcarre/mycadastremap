@@ -1,0 +1,14 @@
+{
+  "name": "affichagecadastre",
+  "version": "1.0.0",
+  "description": "Affiche les donnees cadastrales francaises sur une carte MapBox",
+  "main": "server.js",
+  "author": "Mgcarre",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.16.2"
+  },
+  "scripts": {
+    "start": "nodemon server.js"
+  }
+}
