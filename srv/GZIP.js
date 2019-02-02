@@ -2,9 +2,9 @@ const zlib = require('zlib');
 const http = require('https');
 const fs = require('fs');
 
-module.exports = function(req, res) {
-    if(req.params.any.split('_')[0] == "ADRNIVX"){
-        res.send({message: "La recherche cadastrale ne peut pas avoir lieu sur une adresse précise mais approximative."})
+module.exports = function (req, res) {
+    if (req.params.any.split('_')[0] == "ADRNIVX") {
+        res.send({ message: "La recherche cadastrale ne peut pas avoir lieu sur une adresse précise mais approximative." })
         throw new Error('Recherche avec adresse précise')
     }
     let httpGetObject = new myUrl(req.params.any)
@@ -12,8 +12,8 @@ module.exports = function(req, res) {
     let httpGetUrl = httpGetObject.getType(req.params.type)
     let httpRequest = http.get(httpGetUrl)
     httpRequest.on('response', (response) => {
-        if(response.statusCode < 300) {
-            let out = fs.createWriteStream(fichier)
+        if (response.statusCode < 300) {
+            let out = fs.createWriteStream(__dirname + '/' + fichier)
             let read = zlib.createGunzip()
             response.pipe(read).pipe(out)
             read.on('close', () => {
@@ -33,24 +33,24 @@ module.exports = function(req, res) {
 
 
 class myUrl {
-    constructor(code){
+    constructor(code) {
         this.cp = code.match(/[0-9]{5}/gi)[0]
         this.baseUrl = 'https://cadastre.data.gouv.fr/data/etalab-cadastre/latest/geojson/communes/'
         this.options = ['batiments', 'communes', 'feuilles', 'lieux_dits', 'parcelles', 'sections']
     }
-    getBaseUrl(){
+    getBaseUrl() {
         return this.baseUrl
     }
-    getDepartement(){
+    getDepartement() {
         return this.cp.substr(0, 2) === "97" ? this.cp.substr(0, 3) : this.cp.substr(0, 2)
     }
-    getFolder(){
+    getFolder() {
         return this.getBaseUrl() + this.getDepartement() + '/' + this.cp
     }
-    getBatiments(){
+    getBatiments() {
         return this.getFolder() + `/cadastre-${this.cp}-${this.options[0]}.json.gz`
     }
-    getType(type = 0){
+    getType(type = 0) {
         return this.getFolder() + `/cadastre-${this.cp}-${this.options[type]}.json.gz`
     }
 }

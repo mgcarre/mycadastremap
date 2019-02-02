@@ -4,8 +4,8 @@ Permet d'afficher une carte MapBox avec les paramètres de l'API Cadastre.
 
 ## Pré-requis
 
-* Une clé API MapBox
-* Yarn ou NPM
+* Une clé API MapBox à insérer dans un .env à la racine
+* Reverse proxy pour fichiers statiques
 * Node
 
 ## Usage
@@ -17,7 +17,3 @@ Permet d'afficher une carte MapBox avec les paramètres de l'API Cadastre.
 
 **A utiliser uniquement sur un serveur local.**
 
-## Todo
-
-* Bundle avec Webpack
-* Améliorer la prise en charge des composants vue
