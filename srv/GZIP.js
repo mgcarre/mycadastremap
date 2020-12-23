@@ -18,7 +18,6 @@ module.exports = function (req, res) {
             response.pipe(read).pipe(out)
             read.on('close', () => {
                 res.sendFile(__dirname + '/' + fichier)
-                console.log(`${httpGetObject.options[req.params.type]} : envoyé !`)
             })
             read.on('error', (err) => {
                 console.error(`${httpGetObject.options[req.params.type]} : ERREUR !`, err, response)
@@ -33,7 +32,7 @@ module.exports = function (req, res) {
 
 
 class myUrl {
-    constructor(code) {
+    constructor (code) {
         this.cp = code.match(/[0-9]{5}/gi)[0]
         this.baseUrl = 'https://cadastre.data.gouv.fr/data/etalab-cadastre/latest/geojson/communes/'
         this.options = ['batiments', 'communes', 'feuilles', 'lieux_dits', 'parcelles', 'sections']

@@ -7,8 +7,7 @@
     <title>Recherche</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.52.0/mapbox-gl.css' rel='stylesheet' />
-
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.0.0/mapbox-gl.css' rel='stylesheet' />
     <script src="https://cdn.jsdelivr.net/npm/vue"></script>
     <link rel="stylesheet" href="./css/style.css">
 </head>
@@ -19,10 +18,12 @@
         <div class="columns">
             <div id="app" class="form-group col-8">
                 <h3>Recherche</h3>
-                <form action="#" v-on:submit.prevent="sub" v-bind:class="{ 'has-error': error.active, 'loading': isLoading}">
+                <form action="#" v-on:submit.prevent="sub"
+                    v-bind:class="{ 'has-error': error.active, 'loading': isLoading}">
                     <label for="rech" class="form-label">Ville recherchée</label>
                     <div class="input-group">
-                        <input class="form-input" type="search" name="recherche" id="rech" v-model="value" placeholder="Recherchez une ville ou une adresse">
+                        <input class="form-input" type="search" name="recherche" id="rech" v-model="value"
+                            placeholder="Recherchez une ville ou une adresse">
                         <button class="btn" type="submit">Recherche</button>
                         <button class="btn" id="geolocateMe">Geolocalisez-moi</button>
                     </div>
@@ -57,11 +58,11 @@
             </div>
             <div id="resultats" class="col-4">
                 <h3>Résultats</h3>
-                <ul>
-                    <li v-if="myList.length === 0">Pas de résultat</li>
+                <div>
+                    <span class="chip" v-if="myList.length === 0">Pas de résultat</span>
                     <todo-item v-for="item in myList" :todo="item" :key="item.id" v-on:click.native="select(item.id)">
                     </todo-item>
-                </ul>
+                </div>
             </div>
         </div>
     </div>

@@ -4,7 +4,7 @@ const turf = require('@turf/helpers')
 const token = process.env.TOKEN
 
 class MapboxMap {
-    constructor(HTMLelement) {
+    constructor (HTMLelement) {
         this.HTMLContainer = document.querySelector(HTMLelement)
         this.loaded = false
         this.map = null
@@ -162,6 +162,7 @@ class MapboxMap {
         console.info('Polygones supprimes')
     }
     addPolygons(feature, layer) {
+        this.removePolygons()
         let source = 'cadastre-source-' + layer
         let calque = 'cadastre-calque-' + layer
         this.map.addSource(source, {
@@ -199,7 +200,7 @@ class MapboxMap {
     }
 }
 class Cadastre {
-    constructor(idVille, options = {}) {
+    constructor (idVille, options = {}) {
         this.id = idVille
         this.options = Object.assign({}, {
             building: true,
@@ -245,9 +246,9 @@ Cmap.load()
 
 Vue.component('todo-item', {
     props: ['todo'],
-    template: '<li>{{ todo.label }}</li>'
+    template: '<span class="chip">{{ todo.label }}</span>'
 })
-let resultats = new Vue({
+const resultats = new Vue({
     el: '#resultats',
     data: {
         myList: []
@@ -277,7 +278,7 @@ let resultats = new Vue({
         }
     }
 })
-let app = new Vue({
+const app = new Vue({
     el: '#app',
     data: {
         value: '',
@@ -307,6 +308,7 @@ let app = new Vue({
             }
             if (this.value !== '' && this.value.length !== 0) {
                 recherche(this.value).then(res => {
+                    resultats.clear()
                     this.error.active = false
                     for (let feature of res.features) {
                         let props = feature.properties

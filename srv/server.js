@@ -6,4 +6,6 @@ const mymw = require('./GZIP.js')
 
 app.get('/geom/:any/:type', mymw)
 
+app.get('*', express.static('public'))
+
 app.listen(port, () => console.log(`L'application est lancée sur le port ${port}. Ouvrez http://localhost:${port}`))
