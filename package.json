@@ -8,9 +8,9 @@
   "dependencies": {
     "@turf/area": "^6.0.1",
     "@turf/helpers": "^6.1.4",
-    "dotenv": "^6.2.0",
+    "dotenv": "^8.2.0",
     "express": "^4.16.4",
-    "mapbox-gl": "^0.53.0-beta.1"
+    "mapbox-gl": "^2.0.0"
   },
   "browserslist": {
     "production": [
@@ -21,8 +21,12 @@
     ]
   },
   "scripts": {
-    "start": "node -r dotenv/config srv/server.js",
+    "prestart-dev": "parcel build script.js --no-source-maps -d public/js",
+    "start-dev": "node -r dotenv/config srv/server.js",
     "build": "parcel build script.js --no-source-maps -d public/js",
     "dev": "parcel watch script.js --no-source-maps -d public/js"
+  },
+  "devDependencies": {
+    "parcel-bundler": "^1.12.4"
   }
 }
