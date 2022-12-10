@@ -9,7 +9,7 @@
     "@turf/area": "^6.0.1",
     "@turf/helpers": "^6.1.4",
     "dotenv": "^8.2.0",
-    "express": "^4.16.4",
+    "express": "^4.17.3",
     "mapbox-gl": "^2.0.0"
   },
   "browserslist": {
